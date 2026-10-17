@@ -15,32 +15,6 @@ MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.or
 
 ------------------------------------------------------------------------
 
-## About the author
-
-VirtualDairyHerdR was created by **Vincent Tennanty**, a Cork-based data
-scientist with a background spanning precision livestock farming and
-global pharmaceutical technology.
-
-Vincent has worked as a **Technical Lead in a global pharma company**,
-where he gained deep experience in regulated data pipelines,
-reproducible analysis, and the kind of opinionated, interoperable
-tooling that the [pharmaverse](https://pharmaverse.org/) exemplifies.
-That experience is the direct inspiration for the Farmaverse — the
-belief that agricultural data science deserves the same rigour and open
-infrastructure that clinical data science has built.
-
-On the livestock side, Vincent has hands-on experience with **precision
-dairy technology**, having worked with commercial cow sensor platforms
-including **SmaXtec** and **SensHub** — bolus and collar-based systems
-that generate the exact kind of continuous health, activity, and
-rumination data that VirtualDairyHerdR is designed to simulate. That
-real-world sensor experience shapes every parameter in the package: the
-activity score distributions, the rumination suppression in mastitis
-cases, the lying/standing time windows — all grounded in what these
-systems actually produce on Irish grass-based farms.
-
-------------------------------------------------------------------------
-
 ## What is VirtualDairyHerdR?
 
 VirtualDairyHerdR generates synthetic, farm-ready dairy herd datasets
@@ -181,6 +155,32 @@ guide](https://github.com/VincentTennanty/Farmaverse#-contributing--we-need-you)
     Tennanty V. (2026). VirtualDairyHerdR: A Digital Dairy Herd Simulator for
     Education, Research and Precision Livestock Farming. R package version 0.1.0.
     https://github.com/VincentTennanty/Farmaverse
+
+------------------------------------------------------------------------
+
+## About the author
+
+VirtualDairyHerdR was created by **Vincent Tennanty**, a Cork-based data
+scientist with a background spanning precision livestock farming and
+global pharmaceutical technology.
+
+Vincent has worked as a **Technical Lead in a global pharma company**,
+where he gained deep experience in regulated data pipelines,
+reproducible analysis, and the kind of opinionated, interoperable
+tooling that the [pharmaverse](https://pharmaverse.org/) exemplifies.
+That experience is the direct inspiration for the Farmaverse — the
+belief that agricultural data science deserves the same rigour and open
+infrastructure that clinical data science has built.
+
+On the livestock side, Vincent has hands-on experience with **precision
+dairy technology**, having worked with commercial cow sensor platforms
+including **SmaXtec** and **SensHub** — bolus and collar-based systems
+that generate the exact kind of continuous health, activity, and
+rumination data that VirtualDairyHerdR is designed to simulate. That
+real-world sensor experience shapes every parameter in the package: the
+activity score distributions, the rumination suppression in mastitis
+cases, the lying/standing time windows — all grounded in what these
+systems actually produce on Irish grass-based farms.
 
 ------------------------------------------------------------------------
 

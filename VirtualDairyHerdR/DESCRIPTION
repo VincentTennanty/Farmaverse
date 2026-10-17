@@ -24,6 +24,7 @@ Suggests:
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 LazyData: true
-URL: https://github.com/VincentTennanty/Farmaverse
+URL: https://github.com/VincentTennanty/Farmaverse,
+    https://vincenttennanty.github.io/Farmaverse/VirtualDairyHerdR/
 LogoPath: man/figures/logo.png
 BugReports: https://github.com/VincentTennanty/Farmaverse/issues
