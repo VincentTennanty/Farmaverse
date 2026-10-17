@@ -1,0 +1,29 @@
+Package: VirtualDairyHerdR
+Title: A Digital Dairy Herd Simulator for Education, Research and Precision Livestock Farming
+Version: 0.1.0
+Authors@R: person("Vincent", "Tennanty", email = "Vinny93@live.co.uk", role = c("aut", "cre"))
+Description: Simulates biologically realistic synthetic dairy herd datasets for
+    teaching statistics, data wrangling, visualisation, and machine learning
+    in agricultural and precision livestock farming contexts. Part of the
+    Farmaverse ecosystem.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends: R (>= 4.1.0)
+Imports:
+    dplyr,
+    tibble
+Suggests:
+    ggplot2,
+    gridExtra,
+    lme4,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+LazyData: true
+URL: https://github.com/VincentTennanty/Farmaverse
+LogoPath: man/figures/logo.png
+BugReports: https://github.com/VincentTennanty/Farmaverse/issues

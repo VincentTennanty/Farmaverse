@@ -1,0 +1,81 @@
+url: https://vincenttennanty.github.io/Farmaverse/VirtualDairyHerdR
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  bslib:
+    primary: "#2e7d32"       # deep green — grass-based farming
+    link-color: "#2e7d32"
+    navbar-bg: "#1b5e20"
+    code-bg: "#f1f8e9"
+
+home:
+  title: "VirtualDairyHerdR"
+  description: >
+    A digital dairy herd simulator for education, research, and precision
+    livestock farming. Part of the Farmaverse ecosystem.
+
+navbar:
+  bg: primary
+  structure:
+    left:  [intro, reference, articles]
+    right: [github]
+  components:
+    intro:
+      text: "Get started"
+      href: articles/introduction.html
+    reference:
+      text: "Functions"
+      href: reference/index.html
+    articles:
+      text: "Vignettes"
+      menu:
+        - text: "Introduction"
+          href: articles/introduction.html
+    github:
+      icon: fab fa-github
+      href: https://github.com/VincentTennanty/Farmaverse
+
+reference:
+  - title: "Pipeline — Farm & Herd"
+    desc: "Entry points for the simulation pipeline."
+    contents:
+      - simulate_farm
+      - simulate_herd
+
+  - title: "Pipeline — Milk Production"
+    desc: "Lactation curve engine and daily milk composition."
+    contents:
+      - simulate_lactation
+      - simulate_milk
+
+  - title: "Pipeline — Health & Fertility"
+    desc: "Disease events and reproductive performance."
+    contents:
+      - simulate_mastitis
+      - simulate_fertility
+
+  - title: "Pipeline — Sensors"
+    desc: "Activity, steps, and lying/standing time."
+    contents:
+      - simulate_activity
+
+  - title: "Education"
+    desc: "Grouped summary tables for teaching and exploration."
+    contents:
+      - education_summary
+
+  - title: "Datasets"
+    desc: "Bundled synthetic datasets ready for immediate use."
+    contents:
+      - demo_herd
+      - demo_mastitis
+
+  - title: "Package"
+    contents:
+      - VirtualDairyHerdR-package
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with

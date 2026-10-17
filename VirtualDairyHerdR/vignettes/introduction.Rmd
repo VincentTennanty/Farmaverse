@@ -1,0 +1,258 @@
+---
+title: "Introduction to VirtualDairyHerdR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to VirtualDairyHerdR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  warning  = FALSE,
+  message  = FALSE,
+  fig.width  = 7,
+  fig.height = 4
+)
+library(VirtualDairyHerdR)
+library(ggplot2)
+```
+
+<img src="../man/figures/logo.png" align="right" height="140" />
+
+VirtualDairyHerdR generates biologically realistic synthetic dairy herd data
+for teaching statistics, data wrangling, visualisation, and machine learning
+in precision livestock farming contexts.
+
+## The simulation pipeline
+
+```
+simulate_farm()
+    └── simulate_herd()
+            ├── simulate_milk()
+            │       ├── simulate_mastitis()
+            │       └── simulate_fertility()
+            └── simulate_activity()
+```
+
+---
+
+## Step 1 — Build the herd
+
+```{r build}
+farm <- simulate_farm(name = "Greenfield Farm", n_cows = 200, seed = 42)
+herd <- simulate_herd(farm = farm)
+milk <- simulate_milk(herd, seed = 42)
+health   <- simulate_mastitis(milk, prevalence = 0.15, seed = 42)
+fert     <- simulate_fertility(milk, seed = 42)
+activity <- simulate_activity(herd, seed = 42)
+```
+
+---
+
+## Visualisation
+
+### Lactation curve — milk yield over DIM
+
+Using `longitudinal = TRUE` to generate a full time series (one row per cow
+per DIM), then plotting the Wood's curve for a sample of cows.
+
+```{r lactation-curve}
+herd_long <- simulate_herd(n_cows = 30, longitudinal = TRUE, seed = 42)
+milk_long <- simulate_milk(herd_long, seed = 42)
+
+# Sample 6 cows for clarity
+sample_cows <- unique(milk_long$cow_id)[1:6]
+
+milk_long |>
+  dplyr::filter(cow_id %in% sample_cows) |>
+  ggplot(aes(x = days_in_milk, y = milk_kg, colour = cow_id)) +
+  geom_line(alpha = 0.8) +
+  labs(
+    title  = "Lactation curves — daily milk yield over DIM",
+    x      = "Days in Milk",
+    y      = "Milk yield (kg)",
+    colour = "Cow ID"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+### Breed-level lactation curves
+
+```{r breed-curves}
+milk_long |>
+  ggplot(aes(x = days_in_milk, y = milk_kg, colour = breed, group = cow_id)) +
+  geom_line(alpha = 0.3) +
+  stat_smooth(aes(group = breed), se = FALSE, linewidth = 1.2) +
+  labs(
+    title  = "Lactation curves by breed",
+    x      = "Days in Milk",
+    y      = "Milk yield (kg)",
+    colour = "Breed"
+  ) +
+  theme_minimal()
+```
+
+### SCC over DIM — healthy vs mastitis cows
+
+```{r scc-dim}
+health |>
+  ggplot(aes(x = days_in_milk, y = log(scc), colour = mastitis)) +
+  geom_point(alpha = 0.5, size = 1.5) +
+  geom_smooth(se = FALSE) +
+  scale_colour_manual(
+    values = c("FALSE" = "#2196F3", "TRUE" = "#F44336"),
+    labels = c("Healthy", "Mastitis")
+  ) +
+  labs(
+    title  = "Log SCC over DIM — healthy vs mastitis cows",
+    x      = "Days in Milk",
+    y      = "log(SCC)",
+    colour = NULL
+  ) +
+  theme_minimal()
+```
+
+### Effect of mastitis on milk yield
+
+```{r mastitis-yield}
+health |>
+  ggplot(aes(x = mastitis, y = milk_kg, fill = mastitis)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  scale_fill_manual(
+    values = c("FALSE" = "#2196F3", "TRUE" = "#F44336"),
+    labels = c("Healthy", "Mastitis")
+  ) +
+  scale_x_discrete(labels = c("Healthy", "Mastitis")) +
+  labs(
+    title = "Effect of mastitis on daily milk yield",
+    x     = NULL,
+    y     = "Milk yield (kg)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+### Mastitis effect on rumination and temperature
+
+```{r mastitis-health}
+p1 <- ggplot(health, aes(x = mastitis, y = rumination_minutes, fill = mastitis)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  scale_fill_manual(values = c("FALSE" = "#2196F3", "TRUE" = "#F44336")) +
+  scale_x_discrete(labels = c("Healthy", "Mastitis")) +
+  labs(title = "Rumination time", x = NULL, y = "Minutes") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p2 <- ggplot(health, aes(x = mastitis, y = temperature, fill = mastitis)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  scale_fill_manual(values = c("FALSE" = "#2196F3", "TRUE" = "#F44336")) +
+  scale_x_discrete(labels = c("Healthy", "Mastitis")) +
+  labs(title = "Body temperature", x = NULL, y = "°C") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+### Activity score over DIM
+
+```{r activity-dim}
+activity |>
+  ggplot(aes(x = days_in_milk, y = activity_score, colour = breed)) +
+  geom_point(alpha = 0.4, size = 1.2) +
+  geom_smooth(se = FALSE) +
+  labs(
+    title  = "Activity score over DIM by breed",
+    x      = "Days in Milk",
+    y      = "Activity score",
+    colour = "Breed"
+  ) +
+  theme_minimal()
+```
+
+### Fertility — days open by lactation number
+
+```{r days-open}
+fert |>
+  dplyr::filter(pregnant) |>
+  ggplot(aes(x = factor(lactation), y = days_open, fill = factor(lactation))) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  labs(
+    title = "Days open by lactation number (pregnant cows)",
+    x     = "Lactation number",
+    y     = "Days open"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+---
+
+## Mixed models with lme4
+
+Using `lme4::lmer()` to account for the repeated-measures structure of the
+longitudinal data. Each model includes a random intercept for `cow_id`.
+
+```{r lmer-setup}
+library(lme4)
+milk_long_full <- simulate_milk(herd_long, seed = 42)
+health_long    <- simulate_mastitis(milk_long_full, prevalence = 0.15, seed = 42)
+fert_long      <- simulate_fertility(milk_long_full, seed = 42)
+```
+
+### Model 1 — Milk yield ~ DIM + breed + lactation
+
+Does breed and parity explain variation in milk yield after accounting for
+stage of lactation?
+
+```{r lmer-milk}
+m1 <- lmer(milk_kg ~ days_in_milk + breed + lactation + (1 | cow_id),
+           data = milk_long_full)
+summary(m1)
+```
+
+### Model 2 — log(SCC) ~ mastitis + DIM
+
+Does mastitis status explain SCC after accounting for DIM?
+
+```{r lmer-scc}
+m2 <- lmer(log(scc) ~ mastitis + days_in_milk + (1 | cow_id),
+           data = health_long)
+summary(m2)
+```
+
+### Model 3 — Days open ~ milk yield + lactation
+
+Does higher milk yield delay conception (the production–fertility antagonism)?
+
+```{r lmer-fertility}
+m3 <- lmer(days_open ~ milk_kg + lactation + (1 | cow_id),
+           data = dplyr::filter(fert_long, pregnant))
+summary(m3)
+```
+
+---
+
+## Summarising with `education_summary()`
+
+```{r summary-breed}
+education_summary(fert, by = "breed")
+```
+
+```{r summary-lactation}
+education_summary(fert, by = "lactation")
+```
+
+---
+
+## Reproducibility
+
+```{r reproducibility}
+a <- simulate_milk(simulate_herd(50, seed = 1), seed = 1)
+b <- simulate_milk(simulate_herd(50, seed = 1), seed = 1)
+identical(a, b)
+```

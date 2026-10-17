@@ -1,0 +1,7 @@
+^LICENSE\.md$
+^data-raw$
+^README\.md$
+^cran-comments\.md$
+^docs$
+^_pkgdown\.yml$
+^\.github$
