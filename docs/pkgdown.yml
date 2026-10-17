@@ -1,0 +1,9 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  introduction: introduction.html
+last_built: 2026-10-17T12:02Z
+urls:
+  reference: https://vincenttennanty.github.io/Farmaverse/reference
+  article: https://vincenttennanty.github.io/Farmaverse/articles
