@@ -2,6 +2,7 @@
 
 export(education_summary)
 export(simulate_activity)
+export(simulate_bolus)
 export(simulate_farm)
 export(simulate_fertility)
 export(simulate_herd)

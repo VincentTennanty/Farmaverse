@@ -29,10 +29,13 @@ Disease events and reproductive performance.
 
 ## Pipeline — Sensors
 
-Activity, steps, and lying/standing time.
+Activity, steps, lying/standing time, and high-frequency bolus sensor
+data.
 
 - [`simulate_activity()`](https://vincenttennanty.github.io/Farmaverse/reference/simulate_activity.md)
   : Simulate Activity Sensor Data
+- [`simulate_bolus()`](https://vincenttennanty.github.io/Farmaverse/reference/simulate_bolus.md)
+  : Simulate Bolus Sensor Data
 
 ## Education
 

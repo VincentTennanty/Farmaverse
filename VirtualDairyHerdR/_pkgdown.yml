@@ -34,6 +34,8 @@ navbar:
       menu:
         - text: "Introduction"
           href: articles/introduction.html
+        - text: "Sensor Data Simulation"
+          href: articles/sensor-data.html
     github:
       icon: fab fa-github
       aria-label: GitHub
@@ -59,9 +61,10 @@ reference:
       - simulate_fertility
 
   - title: "Pipeline — Sensors"
-    desc: "Activity, steps, and lying/standing time."
+    desc: "Activity, steps, lying/standing time, and high-frequency bolus sensor data."
     contents:
       - simulate_activity
+      - simulate_bolus
 
   - title: "Education"
     desc: "Grouped summary tables for teaching and exploration."

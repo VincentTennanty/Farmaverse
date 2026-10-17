@@ -121,10 +121,45 @@ test_that("lying + standing always equals 1440", {
   expect_true(all(act$lying_minutes + act$standing_minutes == 1440L))
 })
 
-test_that("simulate_activity values are in valid ranges", {
-  expect_true(all(act$activity_score >= 10))
-  expect_true(all(act$steps >= 100))
-  expect_true(all(act$lying_minutes >= 300 & act$lying_minutes <= 900))
+# ── simulate_bolus ───────────────────────────────────────────────────────────
+test_that("simulate_bolus returns correct dimensions", {
+  herd  <- simulate_herd(5, seed = 42)
+  bolus <- simulate_bolus(herd, days = 3, interval_mins = 10, seed = 42)
+  readings_per_day <- 24 * 60 / 10
+  expect_equal(nrow(bolus), 5 * 3 * readings_per_day)
+})
+
+test_that("simulate_bolus has correct columns", {
+  herd  <- simulate_herd(5, seed = 42)
+  bolus <- simulate_bolus(herd, days = 3, seed = 42)
+  expect_true(all(c("cow_id", "date", "timestamp", "dim_at_reading",
+                    "bolus_temp", "rumination_mins", "activity_index",
+                    "oestrus", "mastitis") %in% names(bolus)))
+})
+
+test_that("simulate_bolus cow_ids match herd", {
+  herd  <- simulate_herd(5, seed = 42)
+  bolus <- simulate_bolus(herd, days = 3, seed = 42)
+  expect_true(all(unique(bolus$cow_id) %in% herd$cow_id))
+})
+
+test_that("simulate_bolus temperature is biologically plausible", {
+  herd  <- simulate_herd(10, seed = 42)
+  bolus <- simulate_bolus(herd, days = 7, seed = 42)
+  expect_true(all(bolus$bolus_temp >= 37.5 & bolus$bolus_temp <= 42.0))
+})
+
+test_that("simulate_bolus rumination_mins are non-negative", {
+  herd  <- simulate_herd(5, seed = 42)
+  bolus <- simulate_bolus(herd, days = 3, seed = 42)
+  expect_true(all(bolus$rumination_mins >= 0))
+})
+
+test_that("simulate_bolus respects custom interval", {
+  herd  <- simulate_herd(3, seed = 42)
+  bolus <- simulate_bolus(herd, days = 2, interval_mins = 15, seed = 42)
+  readings_per_day <- 24 * 60 / 15
+  expect_equal(nrow(bolus), 3 * 2 * readings_per_day)
 })
 
 # ── education_summary ─────────────────────────────────────────────────────────

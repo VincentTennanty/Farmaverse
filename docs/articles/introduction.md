@@ -13,7 +13,8 @@ learning in precision livestock farming contexts.
                 ├── simulate_milk()
                 │       ├── simulate_mastitis()
                 │       └── simulate_fertility()
-                └── simulate_activity()
+                ├── simulate_activity()
+                └── simulate_bolus()           # high-frequency bolus sensor data
 
 ------------------------------------------------------------------------
 
@@ -189,6 +190,152 @@ fert |>
 ```
 
 ![](introduction_files/figure-html/days-open-1.png)
+
+------------------------------------------------------------------------
+
+## Bolus sensor data
+
+[`simulate_bolus()`](https://vincenttennanty.github.io/Farmaverse/reference/simulate_bolus.md)
+generates high-frequency internal bolus sensor data mimicking platforms
+such as SmaXtec. Each cow produces one row per timestamp at a
+user-defined interval (default 10 minutes).
+
+Biological patterns modelled: - **Temperature** — circadian rhythm (min
+~05:00, max ~15:00), mastitis spike, oestrus rise - **Rumination** — two
+daily peaks post-feeding (~08:00 and ~20:00), suppressed at oestrus and
+mastitis - **Activity** — declines with DIM, strong oestrus spike over
+12–18hrs, mastitis suppression
+
+``` r
+
+# 5 cows, 21 days, 10-minute intervals
+bolus_herd <- simulate_herd(5, seed = 42)
+bolus <- simulate_bolus(bolus_herd, days = 21, interval_mins = 10, seed = 42)
+nrow(bolus)  # 5 cows x 21 days x 144 readings/day
+#> [1] 15120
+```
+
+### Temperature — circadian rhythm and event spikes
+
+Plotting a single cow to show the circadian pattern, with oestrus and
+mastitis days highlighted.
+
+``` r
+
+cow1 <- bolus |> dplyr::filter(cow_id == unique(bolus$cow_id)[1])
+
+# Daily mean temperature with event flags
+cow1_daily <- cow1 |>
+  dplyr::group_by(date, oestrus, mastitis) |>
+  dplyr::summarise(mean_temp = mean(bolus_temp), .groups = "drop")
+
+cow1 |>
+  ggplot(aes(x = timestamp, y = bolus_temp)) +
+  geom_line(alpha = 0.4, colour = "#607D8B") +
+  geom_rect(
+    data = dplyr::filter(cow1_daily, oestrus),
+    aes(xmin = as.POSIXct(date), xmax = as.POSIXct(date) + 86400,
+        ymin = -Inf, ymax = Inf),
+    fill = "#FF9800", alpha = 0.2, inherit.aes = FALSE
+  ) +
+  geom_rect(
+    data = dplyr::filter(cow1_daily, mastitis),
+    aes(xmin = as.POSIXct(date), xmax = as.POSIXct(date) + 86400,
+        ymin = -Inf, ymax = Inf),
+    fill = "#F44336", alpha = 0.2, inherit.aes = FALSE
+  ) +
+  labs(
+    title    = "Bolus temperature over time — one cow (21 days)",
+    subtitle = "Orange = oestrus day  |  Red = mastitis day",
+    x        = "Date",
+    y        = "Internal temperature (°C)"
+  ) +
+  theme_minimal()
+```
+
+![](introduction_files/figure-html/bolus-temp-1.png)
+
+### Rumination — daily pattern and event suppression
+
+``` r
+
+cow1 |>
+  dplyr::mutate(hour = as.numeric(format(timestamp, "%H")) +
+                       as.numeric(format(timestamp, "%M")) / 60) |>
+  dplyr::filter(date %in% unique(cow1$date)[1:3]) |>
+  ggplot(aes(x = hour, y = rumination_mins,
+             colour = factor(date), group = factor(date))) +
+  geom_line(alpha = 0.8) +
+  labs(
+    title  = "Rumination pattern across 3 days — 10-minute intervals",
+    x      = "Hour of day",
+    y      = "Rumination (mins per interval)",
+    colour = "Date"
+  ) +
+  theme_minimal()
+```
+
+![](introduction_files/figure-html/bolus-rumination-1.png)
+
+### Activity — oestrus spike detection
+
+The oestrus spike is the primary detection signal on real bolus
+platforms.
+
+``` r
+
+cow1_daily_act <- cow1 |>
+  dplyr::group_by(date, oestrus, mastitis) |>
+  dplyr::summarise(mean_activity = mean(activity_index), .groups = "drop")
+
+cow1_daily_act |>
+  ggplot(aes(x = date, y = mean_activity,
+             fill = oestrus)) +
+  geom_col(alpha = 0.8) +
+  scale_fill_manual(
+    values = c("FALSE" = "#2196F3", "TRUE" = "#FF9800"),
+    labels = c("Normal", "Oestrus")
+  ) +
+  labs(
+    title  = "Mean daily activity index — oestrus detection",
+    x      = "Date",
+    y      = "Mean activity index",
+    fill   = NULL
+  ) +
+  theme_minimal()
+```
+
+![](introduction_files/figure-html/bolus-activity-1.png)
+
+### Herd-level bolus summary
+
+``` r
+
+bolus |>
+  dplyr::group_by(cow_id, oestrus, mastitis) |>
+  dplyr::summarise(
+    mean_temp       = round(mean(bolus_temp), 2),
+    mean_rumination = round(mean(rumination_mins), 2),
+    mean_activity   = round(mean(activity_index), 2),
+    .groups = "drop"
+  ) |>
+  dplyr::arrange(cow_id)
+#> # A tibble: 12 × 6
+#>    cow_id  oestrus mastitis mean_temp mean_rumination mean_activity
+#>    <chr>   <lgl>   <lgl>        <dbl>           <dbl>         <dbl>
+#>  1 COW0001 FALSE   FALSE         38.8            1.81         16.6 
+#>  2 COW0001 TRUE    FALSE         39.3            0.15         31.6 
+#>  3 COW0002 FALSE   FALSE         38.5            2.2          19.3 
+#>  4 COW0002 FALSE   TRUE          40.5            1.05         14.8 
+#>  5 COW0002 TRUE    FALSE         39.2            0.43         42.2 
+#>  6 COW0003 FALSE   FALSE         38.6            2.13         19.0 
+#>  7 COW0003 TRUE    FALSE         38.8            0.19         33.9 
+#>  8 COW0004 FALSE   FALSE         38.7            2            13.3 
+#>  9 COW0004 FALSE   TRUE          40.1            1.36          8.53
+#> 10 COW0004 TRUE    FALSE         39.2            0.3          25.8 
+#> 11 COW0005 FALSE   FALSE         38.5            1.97         18.0 
+#> 12 COW0005 TRUE    FALSE         39.2            0.36         30.3
+```
 
 ------------------------------------------------------------------------
 

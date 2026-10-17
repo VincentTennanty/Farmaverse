@@ -1,0 +1,320 @@
+---
+title: "Sensor Data Simulation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sensor Data Simulation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  warning  = FALSE,
+  message  = FALSE,
+  fig.width  = 7,
+  fig.height = 4
+)
+library(VirtualDairyHerdR)
+library(ggplot2)
+```
+
+<img src="../man/figures/logo.png" align="right" height="140" />
+
+VirtualDairyHerdR simulates two types of precision livestock farming sensor
+data — daily activity collar/tag data via `simulate_activity()`, and
+high-frequency internal bolus sensor data via `simulate_bolus()`.
+
+Both are modelled on the output of real commercial sensor platforms used on
+Irish grass-based dairy farms, including bolus and collar-based systems that
+continuously monitor temperature, rumination, and activity.
+
+---
+
+## Sensor types
+
+| Function | Type | Resolution | Modelled on |
+|---|---|---|---|
+| `simulate_activity()` | Collar / tag | Daily snapshot | Collar-based activity tags |
+| `simulate_bolus()` | Internal bolus | User-defined (default 10 mins) | Bolus sensor platforms |
+
+---
+
+## Daily activity data — `simulate_activity()`
+
+`simulate_activity()` generates a daily snapshot of activity for each cow.
+It accepts the output of `simulate_herd()` and adds four columns.
+
+```{r activity-generate}
+herd     <- simulate_herd(100, seed = 42)
+activity <- simulate_activity(herd, seed = 42)
+head(activity[, c("cow_id", "breed", "days_in_milk", "activity_score",
+                  "steps", "lying_minutes", "standing_minutes")])
+```
+
+Lying and standing minutes always sum to 1440 — a hard biological constraint.
+
+```{r activity-check}
+all(activity$lying_minutes + activity$standing_minutes == 1440)
+```
+
+### Activity score declines with DIM
+
+Activity is highest in early lactation and declines gradually as cows settle
+into mid and late lactation.
+
+```{r activity-dim}
+activity |>
+  ggplot(aes(x = days_in_milk, y = activity_score, colour = breed)) +
+  geom_point(alpha = 0.4, size = 1.2) +
+  geom_smooth(se = FALSE, linewidth = 1) +
+  labs(
+    title  = "Activity score over DIM by breed",
+    x      = "Days in Milk",
+    y      = "Activity score",
+    colour = "Breed"
+  ) +
+  theme_minimal()
+```
+
+### Lying time vs activity
+
+Higher activity cows spend less time lying — the inverse relationship mirrors
+real sensor data.
+
+```{r lying-activity}
+activity |>
+  ggplot(aes(x = activity_score, y = lying_minutes, colour = breed)) +
+  geom_point(alpha = 0.4, size = 1.2) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  labs(
+    title  = "Lying time vs activity score",
+    x      = "Activity score",
+    y      = "Lying minutes per day",
+    colour = "Breed"
+  ) +
+  theme_minimal()
+```
+
+### Steps distribution by breed
+
+```{r steps-breed}
+activity |>
+  ggplot(aes(x = breed, y = steps, fill = breed)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  labs(
+    title = "Daily steps by breed",
+    x     = NULL,
+    y     = "Steps per day"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+---
+
+## High-frequency bolus data — `simulate_bolus()`
+
+`simulate_bolus()` generates continuous sensor readings at a user-defined
+interval (default 10 minutes), producing the kind of data stream you would
+see exported from a bolus sensor platform.
+
+### Key arguments
+
+| Argument | Default | Description |
+|---|---|---|
+| `herd` | — | Output of `simulate_herd()` |
+| `days` | 30 | Days of sensor data per cow |
+| `interval_mins` | 10 | Recording interval in minutes |
+| `start_date` | `Sys.Date()` | Start date for records |
+| `seed` | NULL | Reproducibility |
+
+```{r bolus-generate}
+bolus_herd <- simulate_herd(5, seed = 42)
+bolus      <- simulate_bolus(bolus_herd, days = 21, interval_mins = 10,
+                              seed = 42)
+
+# Dimensions: 5 cows x 21 days x 144 readings/day
+nrow(bolus)
+head(bolus)
+```
+
+---
+
+## Biological patterns
+
+### Temperature — circadian rhythm
+
+Internal body temperature follows a circadian rhythm with a daily minimum
+around 05:00 and maximum around 15:00 (amplitude ~0.5°C). This mirrors the
+pattern recorded by real bolus sensors on farm.
+
+```{r temp-circadian}
+# Single cow, first 3 days
+cow1 <- bolus |> dplyr::filter(cow_id == unique(bolus$cow_id)[1])
+
+cow1 |>
+  dplyr::filter(date %in% unique(cow1$date)[1:3]) |>
+  dplyr::mutate(hour = as.numeric(format(timestamp, "%H")) +
+                       as.numeric(format(timestamp, "%M")) / 60) |>
+  ggplot(aes(x = hour, y = bolus_temp,
+             colour = factor(date), group = factor(date))) +
+  geom_line(alpha = 0.8) +
+  labs(
+    title  = "Circadian temperature pattern — 3 days at 10-minute intervals",
+    x      = "Hour of day",
+    y      = "Internal temperature (°C)",
+    colour = "Date"
+  ) +
+  theme_minimal()
+```
+
+### Temperature — mastitis and oestrus spikes
+
+Mastitis raises temperature by +0.5 to +2.5°C. Oestrus raises it by +0.3
+to +0.8°C. Both are detectable against the circadian baseline.
+
+```{r temp-events}
+cow1_daily <- cow1 |>
+  dplyr::group_by(date, oestrus, mastitis) |>
+  dplyr::summarise(mean_temp = mean(bolus_temp), .groups = "drop")
+
+cow1 |>
+  ggplot(aes(x = timestamp, y = bolus_temp)) +
+  geom_line(alpha = 0.35, colour = "#607D8B") +
+  geom_rect(
+    data = dplyr::filter(cow1_daily, oestrus),
+    aes(xmin = as.POSIXct(date), xmax = as.POSIXct(date) + 86400,
+        ymin = -Inf, ymax = Inf),
+    fill = "#FF9800", alpha = 0.2, inherit.aes = FALSE
+  ) +
+  geom_rect(
+    data = dplyr::filter(cow1_daily, mastitis),
+    aes(xmin = as.POSIXct(date), xmax = as.POSIXct(date) + 86400,
+        ymin = -Inf, ymax = Inf),
+    fill = "#F44336", alpha = 0.2, inherit.aes = FALSE
+  ) +
+  labs(
+    title    = "Internal temperature over 21 days",
+    subtitle = "Orange = oestrus  |  Red = mastitis",
+    x        = "Date",
+    y        = "Temperature (°C)"
+  ) +
+  theme_minimal()
+```
+
+### Rumination — post-feeding peaks
+
+Rumination peaks twice daily (~08:00 and ~20:00) following feeding. It is
+suppressed during oestrus (near zero) and reduced 30–60% during mastitis.
+
+```{r rumination-pattern}
+cow1 |>
+  dplyr::filter(date %in% unique(cow1$date)[1:5]) |>
+  dplyr::mutate(hour = as.numeric(format(timestamp, "%H")) +
+                       as.numeric(format(timestamp, "%M")) / 60,
+                event = dplyr::case_when(
+                  oestrus  ~ "Oestrus",
+                  mastitis ~ "Mastitis",
+                  TRUE     ~ "Normal"
+                )) |>
+  ggplot(aes(x = hour, y = rumination_mins,
+             colour = event, group = factor(date))) +
+  geom_line(alpha = 0.7) +
+  scale_colour_manual(values = c(
+    "Normal"   = "#2196F3",
+    "Oestrus"  = "#FF9800",
+    "Mastitis" = "#F44336"
+  )) +
+  labs(
+    title  = "Rumination pattern — post-feeding peaks and event suppression",
+    x      = "Hour of day",
+    y      = "Rumination (mins per 10-min interval)",
+    colour = NULL
+  ) +
+  theme_minimal()
+```
+
+### Activity — oestrus spike detection
+
+The oestrus activity spike is the primary detection signal on commercial bolus
+platforms. It is 2–3× baseline and lasts 12–18 hours.
+
+```{r activity-oestrus}
+cow1 |>
+  dplyr::group_by(date, oestrus, mastitis) |>
+  dplyr::summarise(mean_activity = mean(activity_index), .groups = "drop") |>
+  ggplot(aes(x = date, y = mean_activity, fill = oestrus)) +
+  geom_col(alpha = 0.85) +
+  scale_fill_manual(
+    values = c("FALSE" = "#2196F3", "TRUE" = "#FF9800"),
+    labels = c("Normal", "Oestrus")
+  ) +
+  labs(
+    title  = "Mean daily activity — oestrus spike detection",
+    x      = "Date",
+    y      = "Mean activity index",
+    fill   = NULL
+  ) +
+  theme_minimal()
+```
+
+---
+
+## Custom intervals
+
+The `interval_mins` argument lets you match the resolution of any sensor
+platform. Common values:
+
+```{r custom-interval}
+# 15-minute intervals
+bolus_15 <- simulate_bolus(bolus_herd, days = 7, interval_mins = 15, seed = 42)
+nrow(bolus_15)  # 5 cows x 7 days x 96 readings/day
+
+# 30-minute intervals
+bolus_30 <- simulate_bolus(bolus_herd, days = 7, interval_mins = 30, seed = 42)
+nrow(bolus_30)  # 5 cows x 7 days x 48 readings/day
+```
+
+---
+
+## Joining bolus data to milk records
+
+Because `cow_id` is consistent across all pipeline functions, bolus data joins
+cleanly to milk, health, and fertility records.
+
+```{r join-bolus-milk}
+milk <- simulate_milk(bolus_herd, seed = 42)
+
+# Daily bolus summary per cow
+bolus_daily <- bolus |>
+  dplyr::group_by(cow_id, date) |>
+  dplyr::summarise(
+    mean_temp       = round(mean(bolus_temp), 2),
+    total_rumination = round(sum(rumination_mins), 1),
+    mean_activity   = round(mean(activity_index), 2),
+    oestrus         = any(oestrus),
+    mastitis        = any(mastitis),
+    .groups         = "drop"
+  )
+
+# Join to milk snapshot
+dplyr::left_join(milk[, c("cow_id", "milk_kg", "scc")],
+                 dplyr::filter(bolus_daily, date == min(bolus_daily$date)),
+                 by = "cow_id") |>
+  head(10)
+```
+
+---
+
+## Use cases
+
+- **Oestrus detection** — use the activity spike + temperature rise as features
+  in a classification model
+- **Mastitis early warning** — temperature + rumination suppression as a
+  combined alert signal
+- **Anomaly detection** — train unsupervised models on normal circadian patterns
+  and flag deviations
+- **Sensor fusion** — join bolus data with milk recording to model the
+  relationship between rumination and milk yield
